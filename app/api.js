@@ -1,15 +1,13 @@
-// make.fun's public API: read-only GET requests, open to any origin (CORS).
-// The full API is described at https://make.fun/api/openapi.json.
-
+// make.fun's public API: read-only GET, open CORS. Answers are cached per path for the session.
 const API = 'https://make.fun/api';
-
-async function get(path) {
-  const res = await fetch(API + path);
-  return res.json();
+const cache = new Map();
+export async function api(path) {
+  if (cache.has(path)) return cache.get(path);
+  const p = fetch(API + path).then((r) => r.json()).catch(() => null);
+  cache.set(path, p);
+  return p;
 }
-
-/** The open bounties: { items: [...] } (activity=times leaves out the activity a board does not show). */
-export const getBounties = () => get('/competitions?status=open&activity=times');
-
-/** One bounty, by its slug. */
-export const getBounty = (slug) => get(`/competitions/${encodeURIComponent(slug)}`);
+export const getBounties = () => api('/competitions?status=open&activity=times');
+export const getBounty = (slug) => api('/competitions/' + encodeURIComponent(slug));
+export const getLeaderboard = (slug) => api('/competitions/' + encodeURIComponent(slug) + '/leaderboard');
+export const getProfile = (handle) => api('/profiles/' + encodeURIComponent(handle));

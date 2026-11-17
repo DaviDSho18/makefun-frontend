@@ -1,29 +1,48 @@
-// Small helpers for showing API values.
-
-/** Text made safe to put inside HTML. */
-export function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+export function esc(v) {
+  if (v == null) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-/** A dollar amount ('1000.00' or 0.5) as '$1,000' or '$0.50'. */
-export function money(value) {
-  const n = Number(value);
-  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: Number.isInteger(n) ? 0 : 2 });
+export function money(v) {
+  if (v == null || v === '' || isNaN(Number(v))) return '$0';
+  const n = Number(v);
+  return '$' + n.toLocaleString('en-US', {
+    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-/** A deadline as a date in UTC. */
 export function date(iso) {
-  return `${new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  return d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 }
 
-/** The time until a deadline: '2d 4h left', '35m left', or 'ended'. */
 export function timeLeft(iso) {
-  const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return 'ended';
-  const days = Math.floor(ms / 86400000);
-  const hours = Math.floor((ms % 86400000) / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  if (days > 0) return `${days}d ${hours}h left`;
-  if (hours > 0) return `${hours}h ${minutes}m left`;
-  return `${minutes}m left`;
+  if (!iso) return 'ended';
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return 'ended';
+  const totalMins = Math.floor(diff / 60000);
+  const totalHours = Math.floor(totalMins / 60);
+  const days = Math.floor(totalHours / 24);
+  if (days > 0) {
+    const remHours = totalHours % 24;
+    return `${days}d ${remHours}h left`;
+  }
+  if (totalHours > 0) {
+    const remMins = totalMins % 60;
+    return `${totalHours}h ${remMins}m left`;
+  }
+  return `${Math.max(1, totalMins)}m left`;
+}
+
+export function num(v) {
+  if (v == null || v === '' || isNaN(Number(v))) return '0';
+  return Number(v).toLocaleString('en-US');
 }
